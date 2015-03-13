@@ -30,7 +30,10 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -81,6 +84,7 @@ public class RepoScm extends SCM implements Serializable {
 	private final String manifestBranch;
 	private final String manifestFile;
 	private final String manifestGroup;
+	private final String ignoreProjects;
 	private final String repoUrl;
 	private final String mirrorDir;
 	private final int jobs;
@@ -162,6 +166,15 @@ public class RepoScm extends SCM implements Serializable {
 	public String getManifestGroup() {
 		return manifestGroup;
 	}
+
+	/**
+	 * returns list of ignore projects.
+	 */
+	@Exported
+	public String getIgnoreProjects() {
+		return ignoreProjects;
+	}
+
 
 	/**
 	 * Returns the repo url. by default, this is null and
@@ -258,6 +271,8 @@ public class RepoScm extends SCM implements Serializable {
 	 *            The group name for the projects that need to be fetched.
 	 *            Typically, this is null and all projects tagged 'default' will
 	 *            be fetched.
+	 * @param ignoreProjects
+	 * 			  projects to ignore
 	 * @param mirrorDir
 	 *            The path of the mirror directory to reference when
 	 *            initializing repo.
@@ -296,8 +311,11 @@ public class RepoScm extends SCM implements Serializable {
 	 */
 	@DataBoundConstructor
 	public RepoScm(final String manifestRepositoryUrl,
-			final String manifestBranch, final String manifestFile,
-			final String manifestGroup, final String mirrorDir, final int jobs,
+			final String manifestBranch,
+			final String manifestFile,
+			final String manifestGroup,
+			final String ignoreProjects,
+			final String mirrorDir, final int jobs,
 			final int depth,
 			final String localManifest, final String destinationDir,
 			final String repoUrl,
@@ -306,6 +324,7 @@ public class RepoScm extends SCM implements Serializable {
 			final boolean quiet,
 			final boolean trace,
 			final boolean showAllChanges) {
+		this.ignoreProjects = Util.fixEmptyAndTrim(ignoreProjects);
 		this.manifestRepositoryUrl = manifestRepositoryUrl;
 		this.manifestBranch = Util.fixEmptyAndTrim(manifestBranch);
 		this.manifestGroup = Util.fixEmptyAndTrim(manifestGroup);
@@ -333,6 +352,29 @@ public class RepoScm extends SCM implements Serializable {
 		// build, if a build was aborted before it reported the repository
 		// state, etc.
 		return null;
+	}
+
+	private boolean shouldIgnoreChanges(final RevisionState current,
+										final RevisionState baseline) {
+		List<ProjectState>  changedProjects = current.whatChanged(baseline);
+		if ((changedProjects == null) || (ignoreProjects == null)) {
+			return false;
+		}
+		if (ignoreProjects.length() == 0) {
+			return false;
+		}
+
+		Set<String> ignored =  new HashSet<String>(
+				Arrays.asList(ignoreProjects.split(" |,")));
+
+		// Check for every changed item if it is not contained in the
+		// ignored setting .. project must be rebuilt
+		for (ProjectState changed : changedProjects) {
+			if (!ignored.contains(changed.getServerPath())) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@Override
@@ -374,11 +416,16 @@ public class RepoScm extends SCM implements Serializable {
 				getStaticManifest(launcher, repoDir, listener.getLogger()),
 				getManifestRevision(launcher, repoDir, listener.getLogger()),
 				expandedManifestBranch, listener.getLogger());
+
 		final Change change;
 		if (currentState.equals(myBaseline)) {
 			change = Change.NONE;
 		} else {
-			change = Change.SIGNIFICANT;
+			if (shouldIgnoreChanges(currentState, (RevisionState) myBaseline)) {
+				change = Change.NONE;
+			} else {
+				change = Change.SIGNIFICANT;
+			}
 		}
 		return new PollingResult(myBaseline, currentState, change);
 	}
@@ -501,6 +548,7 @@ public class RepoScm extends SCM implements Serializable {
 			commands.add("-g");
 			commands.add(env.expand(manifestGroup));
 		}
+
 		if (depth != 0) {
 			commands.add("--depth=" + depth);
 		}
