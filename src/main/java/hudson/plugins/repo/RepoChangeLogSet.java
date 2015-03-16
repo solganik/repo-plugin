@@ -54,7 +54,7 @@ public class RepoChangeLogSet extends ChangeLogSet<ChangeLogEntry> {
 			log.setParent(this);
 		}
 	}
-
+	
 	/**
 	 * Returns an iterator for our RepoChangeLogEntry list. This is used when
 	 * generating the Web UI.

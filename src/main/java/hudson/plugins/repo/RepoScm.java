@@ -50,6 +50,7 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TaskListener;
+import hudson.plugins.repo.browser.RepoRepositoryBrowser;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
@@ -96,6 +97,7 @@ public class RepoScm extends SCM implements Serializable {
 	private final boolean quiet;
 	private final boolean trace;
 	private final boolean showAllChanges;
+	private RepoRepositoryBrowser browser;
 
 	/**
 	 * Returns the manifest repository URL.
@@ -113,6 +115,15 @@ public class RepoScm extends SCM implements Serializable {
 	public String getManifestBranch() {
 		return manifestBranch;
 	}
+
+	/**
+	 * Returns repository browser.
+	 */
+	@Override
+	@Exported
+    public RepoRepositoryBrowser getBrowser() {
+        return browser;
+    }
 
 	/**
 	 * Same as {@link #getManifestBranch()} but with <em>default</em>
@@ -308,6 +319,8 @@ public class RepoScm extends SCM implements Serializable {
 	 * @param showAllChanges
 	 *            If this value is true, add the "--first-parent" option to
 	 *            "git log" when determining changesets.
+	 * @param browser
+	 *            Browser to use as a repository browser
 	 */
 	@DataBoundConstructor
 	public RepoScm(final String manifestRepositoryUrl,
@@ -323,7 +336,8 @@ public class RepoScm extends SCM implements Serializable {
 			final boolean resetFirst,
 			final boolean quiet,
 			final boolean trace,
-			final boolean showAllChanges) {
+			final boolean showAllChanges,
+			final RepoRepositoryBrowser browser) {
 		this.ignoreProjects = Util.fixEmptyAndTrim(ignoreProjects);
 		this.manifestRepositoryUrl = manifestRepositoryUrl;
 		this.manifestBranch = Util.fixEmptyAndTrim(manifestBranch);
@@ -340,6 +354,7 @@ public class RepoScm extends SCM implements Serializable {
 		this.trace = trace;
 		this.showAllChanges = showAllChanges;
 		this.repoUrl = Util.fixEmptyAndTrim(repoUrl);
+		this.browser = browser;
 	}
 
 	@Override
@@ -415,6 +430,7 @@ public class RepoScm extends SCM implements Serializable {
 		final RevisionState currentState = new RevisionState(
 				getStaticManifest(launcher, repoDir, listener.getLogger()),
 				getManifestRevision(launcher, repoDir, listener.getLogger()),
+				manifestRepositoryUrl,
 				expandedManifestBranch, listener.getLogger());
 
 		final Change change;
@@ -459,7 +475,7 @@ public class RepoScm extends SCM implements Serializable {
 				getManifestRevision(launcher, repoDir, listener.getLogger());
 		final String expandedBranch = env.expand(manifestBranch);
 		final RevisionState currentState =
-				new RevisionState(manifest, manifestRevision, expandedBranch,
+				new RevisionState(manifest, manifestRevision, manifestRepositoryUrl, expandedBranch,
 						listener.getLogger());
 		build.addAction(currentState);
 
@@ -623,7 +639,7 @@ public class RepoScm extends SCM implements Serializable {
 		debug.log(Level.FINEST, manifestText);
 		return manifestText;
 	}
-
+	
 	private RevisionState getLastState(final Run<?, ?> lastBuild,
 			final String expandedManifestBranch) {
 		if (lastBuild == null) {
@@ -664,7 +680,7 @@ public class RepoScm extends SCM implements Serializable {
 		 * file system.
 		 */
 		public DescriptorImpl() {
-			super(null);
+			super(RepoScm.class, RepoRepositoryBrowser.class);
 			load();
 		}
 

@@ -55,6 +55,7 @@ public class ChangeLogEntry extends ChangeLogSet.Entry {
 
 		private final String path;
 		private final char action;
+		private final ChangeLogEntry changeEntry;
 
 		/**
 		 * Create a new ModifiedFile object with the given path and action.
@@ -65,9 +66,10 @@ public class ChangeLogEntry extends ChangeLogSet.Entry {
 		 *            the action performed on the file, as reported by Git (A
 		 *            for add, D for delete, M for modified, etc)
 		 */
-		public ModifiedFile(final String path, final char action) {
+		public ModifiedFile(final String path, final char action, ChangeLogEntry changeEntry) {
 			this.path = path;
 			this.action = action;
+			this.changeEntry = changeEntry;
 		}
 
 		/**
@@ -82,6 +84,10 @@ public class ChangeLogEntry extends ChangeLogSet.Entry {
 		 */
 		public char getAction() {
 			return action;
+		}
+		
+		public ChangeLogEntry getChangeSet(){
+			return changeEntry;
 		}
 
 		/**
@@ -291,6 +297,9 @@ public class ChangeLogEntry extends ChangeLogSet.Entry {
 		// split them up.
 		super.setParent(parent);
 	}
+	
+	
+	
 
 	@Override
 	public Collection<String> getAffectedPaths() {
@@ -309,4 +318,7 @@ public class ChangeLogEntry extends ChangeLogSet.Entry {
 			}
 		};
 	}
+	
+	
+	
 }

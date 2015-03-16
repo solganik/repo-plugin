@@ -38,6 +38,7 @@ public final class ProjectState {
 	private final String path;
 	private final String serverPath;
 	private final String revision;
+	private final String fullGitRepositoryUri;
 
 	private static Logger debug =
 		Logger.getLogger("hudson.plugins.repo.ProjectState");
@@ -58,13 +59,14 @@ public final class ProjectState {
 	 *            The SHA-1 revision of the project
 	 */
 	public static synchronized ProjectState constructCachedInstance(
-			final String path, final String serverPath, final String revision) {
+			final String path, final String serverPath, final String revision,
+			final String fullProjectUri) {
 		ProjectState projectState
 			= projectStateCache.get(
-					calculateHashCode(path, serverPath, revision));
+					calculateHashCode(path, serverPath, revision, fullProjectUri));
 
 		if (projectState == null) {
-			projectState = new ProjectState(path, serverPath, revision);
+			projectState = new ProjectState(path, serverPath, revision, fullProjectUri);
 			projectStateCache.put(projectState.hashCode(), projectState);
 		}
 
@@ -76,10 +78,11 @@ public final class ProjectState {
 	 * constructCachedInstance().
 	 */
 	private ProjectState(final String path, final String serverPath,
-			final String revision) {
+			final String revision, final String fullGitRepositoryUri) {
 		this.path = path;
 		this.serverPath = serverPath;
 		this.revision = revision;
+		this.fullGitRepositoryUri = fullGitRepositoryUri;
 
 		debug.log(Level.FINE, "path: " + path + " serverPath: " + serverPath
 				+ " revision: " + revision);
@@ -92,7 +95,7 @@ public final class ProjectState {
 	private synchronized Object readResolve() {
 		ProjectState projectState
 			= projectStateCache.get(
-				calculateHashCode(path, serverPath, revision));
+				calculateHashCode(path, serverPath, revision, fullGitRepositoryUri));
 
 		if (projectState == null) {
 			projectStateCache.put(this.hashCode(), this);
@@ -123,6 +126,13 @@ public final class ProjectState {
 	public String getRevision() {
 		return revision;
 	}
+	
+	/**
+	 * Returns full repository URI of project
+	 */
+	public String getFullGitRepositoryUri(){
+		return fullGitRepositoryUri;
+	}
 
 	@Override
 	public boolean equals(final Object obj) {
@@ -137,12 +147,14 @@ public final class ProjectState {
 				&& (serverPath == null ? other.serverPath == null
 						: serverPath.equals(other.serverPath))
 				&& (revision == null ? other.revision == null : revision
-						.equals(other.revision));
+						.equals(other.revision))
+				&& (fullGitRepositoryUri == null ? other.fullGitRepositoryUri == null : fullGitRepositoryUri
+						.equals(other.fullGitRepositoryUri));
 	}
 
 	@Override
 	public int hashCode() {
-		return calculateHashCode(path, serverPath, revision);
+		return calculateHashCode(path, serverPath, revision, fullGitRepositoryUri);
 	}
 
 	/**
@@ -157,9 +169,10 @@ public final class ProjectState {
 	 *            The SHA-1 revision of the project
 	 */
 	public static int calculateHashCode(final String path,
-			final String serverPath, final String revision) {
+			final String serverPath, final String revision, final String fullProjectUri) {
 		return 23 + (path == null ? 37 : path.hashCode())
 			+ (serverPath == null ? 97 : serverPath.hashCode())
-			+ (revision == null ? 389 : revision.hashCode());
+			+ (revision == null ? 389 : revision.hashCode()) 
+			+ (fullProjectUri  == null ? 397 : fullProjectUri.hashCode());
 	}
 }

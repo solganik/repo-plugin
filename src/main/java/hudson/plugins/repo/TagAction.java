@@ -24,6 +24,7 @@
 package hudson.plugins.repo;
 
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.scm.AbstractScmTagAction;
 
 import org.kohsuke.stapler.export.ExportedBean;
@@ -43,7 +44,7 @@ public class TagAction extends AbstractScmTagAction {
 	 *            Build which we are interested in tagging
 	 */
 	TagAction(final AbstractBuild<?, ?> build) {
-		super(build);
+		super((Run)build);
 	}
 
 	/**
@@ -88,4 +89,8 @@ public class TagAction extends AbstractScmTagAction {
         final String manifest = revisionState.getManifest();
         return manifest;
 	}
+    
+    public static RevisionState getStateForBuild(@SuppressWarnings("rawtypes") AbstractBuild build) {
+    	return build.getAction(RevisionState.class);
+    }
 }
