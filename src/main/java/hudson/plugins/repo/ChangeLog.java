@@ -193,18 +193,21 @@ public class ChangeLog extends ChangeLogParser {
 
 				final List<ModifiedFile> modifiedFiles =
 						new ArrayList<ModifiedFile>();
+				ChangeLogEntry nc = new ChangeLogEntry(change.getPath(), change
+						.getServerPath(), revision, authorName, authorEmail,
+						authorDate, committerName, committerEmail,
+						committerDate, commitText, modifiedFiles);
+
 				for (final String fileLine : fileLines) {
 					if (!fileLine.startsWith(":")) {
 						continue;
 					}
 					final char action = fileLine.substring(37, 38).charAt(0);
 					final String path = fileLine.substring(39);
-					modifiedFiles.add(new ModifiedFile(path, action));
+					modifiedFiles.add(new ModifiedFile(path, action, nc));
 				}
-				ChangeLogEntry nc = new ChangeLogEntry(change.getPath(), change
-						.getServerPath(), revision, authorName, authorEmail,
-						authorDate, committerName, committerEmail,
-						committerDate, commitText, modifiedFiles);
+
+
 				logs.add(nc);
 				debug.log(Level.FINEST, nc.toString());
 			}

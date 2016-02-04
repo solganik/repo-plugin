@@ -5,23 +5,28 @@
 	xmlns:l="/lib/layout"
 	xmlns:t="/lib/hudson"
 	xmlns:f="/lib/form">
-
+	
+	<j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
 	<j:choose>
-		<j:when test="${it.emptySet}">
-			No changes.
-		</j:when>
-
-	<j:otherwise>
-		Changes
-		<ul>
-			<j:forEach var="cs" items="${it.items}" varStatus="loop">
-				<li>
-					${cs.msgAnnotated} <br/>
-					-- <a href="${rootURL}/${cs.author.url}/">${cs.author}</a> /
-					<a href="changes#detail${loop.index}">detail</a> <br/>
-				</li>
-			</j:forEach>
-		</ul>
-	</j:otherwise>
-	</j:choose>
+    <j:when test="${it.emptySet}">
+      No changes.
+    </j:when>
+    <j:otherwise>
+      Changes
+      <ol>
+        <j:forEach var="cs" items="${it.items}" varStatus="loop">
+          <li>                      	          
+            <j:out value="${cs.msgAnnotated}"/>
+            (<a href="changes#detail${loop.index}">detail</a>
+            <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
+            <j:if test="${cslink!=null}">
+              <j:text> / </j:text>
+              <a href="${cslink}">${browser.descriptor.displayName}-${cs.serverPath}</a>
+            </j:if>
+            <j:text>)</j:text>
+          </li>
+        </j:forEach>
+      </ol>
+    </j:otherwise>
+  </j:choose>
 </j:jelly>

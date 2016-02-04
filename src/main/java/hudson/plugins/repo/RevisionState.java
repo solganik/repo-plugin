@@ -40,8 +40,11 @@ import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.lang.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
@@ -67,13 +70,15 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 	 *            A string representation of the static manifest XML file
 	 * @param manifestRevision
      *            Git hash of the manifest repo
+     * @param manifestRepositoryUrl
+     *            Url of manifest repository
 	 * @param branch
 	 *            The branch of the manifest project
 	 * @param logger
 	 *            A PrintStream for logging errors
 	 */
 	public RevisionState(final String manifest, final String manifestRevision,
-            final String branch, final PrintStream logger) {
+			final String manifestRepositoryUrl, final String branch, final PrintStream logger) {
 		this.manifest = manifest;
 		this.branch = branch;
 		try {
@@ -87,6 +92,9 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 				logger.println("Error - malformed manifest");
 				return;
 			}
+			Map<String, Element> remotes = parseManifestRemotes(doc.getElementsByTagName("remote"));
+			Map<String, String> defaults =
+					parseManifestDefaults(doc.getElementsByTagName("default"));
 			final NodeList projectNodes = doc.getElementsByTagName("project");
 			final int numProjects = projectNodes.getLength();
 			for (int i = 0; i < numProjects; i++) {
@@ -100,6 +108,7 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 				final String revision =
 						Util.fixEmptyAndTrim(projectElement
 								.getAttribute("revision"));
+				final String projectUri = getProjectGitURI(projectElement, remotes, defaults);
 				if (path == null) {
 					// 'repo manifest -o' doesn't output a path if it is the
 					// same as the server path, even if the path is specified.
@@ -107,26 +116,77 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 				}
 				if (path != null && serverPath != null && revision != null) {
 					projects.put(path, ProjectState.constructCachedInstance(
-							path, serverPath, revision));
+							path, serverPath, revision, projectUri));
 					if (logger != null) {
 						logger.println("Added a project: " + path
 								+ " at revision: " + revision);
 					}
 				}
 			}
-
-            final String manifestP = ".repo/manifests.git";
-            projects.put(manifestP, ProjectState.constructCachedInstance(
-                        manifestP, manifestP, manifestRevision));
-            if (logger != null) {
-                logger.println("Manifest at revision: " + manifestRevision);
-            }
-
-
+			final String manifestP = ".repo/manifests.git";
+			projects.put(manifestP, ProjectState.constructCachedInstance(
+			            manifestP, manifestP, manifestRevision, manifestRepositoryUrl));
+			if (logger != null) {
+			    logger.println("Manifest at revision: " + manifestRevision);
+			}
 		} catch (final Exception e) {
 			logger.println(e);
 			return;
 		}
+	}
+
+	private Map<String, Element> parseManifestRemotes(final NodeList remotesSection) {
+		Map<String, Element> remotes = new HashMap<String, Element>();
+		if (remotesSection == null) {
+			return remotes;
+		}
+
+		final int numRemotes = remotesSection.getLength();
+		for (int i = 0; i < numRemotes; i++) {
+			final Element projectElement = (Element) remotesSection.item(i);
+			final String remoteName = Util.fixEmptyAndTrim(projectElement.getAttribute("name"));
+			remotes.put(remoteName, projectElement);
+		}
+		return remotes;
+	}
+
+	private Map<String, String> parseManifestDefaults(final NodeList remotesSection) {
+		Map<String, String> defaults = new HashMap<String, String>();
+		if ((remotesSection == null) || (remotesSection.getLength() == 0)) {
+			return defaults;
+		}
+		final Element defaultElement = (Element) remotesSection.item(0);
+		NamedNodeMap attributes = defaultElement.getAttributes();
+		for (int i = 0; i < attributes.getLength(); ++i) {
+			Node attr = attributes.item(i);
+			defaults.put(attr.getNodeName(), attr.getNodeValue());
+		}
+		return defaults;
+	}
+
+	private String getProjectGitURI(final Element projectElement,
+									final Map<String, Element> remotes,
+									final Map<String, String> manifestDefaults) {
+		final String serverPath = Util.
+				fixEmptyAndTrim(projectElement.getAttribute("name"));
+		final String projectRemote =
+				Util.fixEmptyAndTrim(projectElement.getAttribute("remote"));
+		String remoteBase;
+		if (StringUtils.isEmpty(projectRemote)) {
+			//${remote_fetch}/${project_name}.git
+			if (!manifestDefaults.containsKey("remote")) {
+			   debug.warning("Failed to configure URI");
+			   return "";
+			}
+			remoteBase = manifestDefaults.get("remote");
+		} else {
+			if (!remotes.containsKey(projectRemote)) {
+				debug.warning("Failed to configure URI cannot find remote");
+				return "";
+			}
+			remoteBase = remotes.get(projectRemote).getAttribute("fetch");
+		}
+		return remoteBase + "/" + serverPath + ".git";
 	}
 
 	@Override
@@ -165,6 +225,18 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 	 */
 	public String getManifest() {
 		return manifest;
+	}
+
+	/**
+	 * Gets project by name.
+	 * @param projectName name of the project to return
+	 * @return project by name
+	 */
+	public ProjectState getProject(final String projectName) {
+		if (!projects.containsKey(projectName)) {
+			return null;
+		}
+		return projects.get(projectName);
 	}
 
 	/**
@@ -207,7 +279,7 @@ public class RevisionState extends SCMRevisionState implements Serializable {
 				debug.log(Level.FINE, "New project: " + key);
 				changes.add(ProjectState.constructCachedInstance(
 						newProject.getPath(), newProject.getServerPath(),
-						null));
+						null, newProject.getFullGitRepositoryUri()));
 			} else if (!status.equals(projects.get(key))) {
 				changes.add(previousStateCopy.get(key));
 			}

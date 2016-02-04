@@ -79,6 +79,8 @@
 		<f:entry title="Local Manifest" help="/plugin/repo/help-localManifest.html">
 			<f:textarea name="repo.localManifest" value="${scm.localManifest}" rows="10" />
 		</f:entry>
+		
+		<t:listScmBrowsers name="repo.browser" />
 
 	</f:advanced>
 </j:jelly>

@@ -8,9 +8,10 @@
 	<h2>Summary</h2>
 	<ol>
 		<j:forEach var="cs" items="${it.logs}">
-			<li><st:out value="${cs.msg}"/></li>
+			<li><j:out value="${cs.msgAnnotated}"/> (<a href="#${cs.revision}">details</a>)</li>			
 		</j:forEach>
 	</ol>
+	<j:set var="browser" value="${it.browser}"/>
 
 	<table class="pane" style="border:none">
 		<j:forEach var="cs" items="${it.items}" varStatus="loop">
@@ -25,15 +26,31 @@
 							&amp;lt;${cs.authorEmail}&amp;gt; on ${cs.authorDate}<br/>
 						Committer: <a href="${rootURL}/${cs.committer.url}/">${cs.committer}</a>
 							&amp;lt;${cs.committerEmail}&amp;gt; on ${cs.committerDate}<br/>
+						
+					    <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
+              			<j:if test="${cslink!=null}">
+                			<a href="${cslink}">${cs.revision}</a>
+              			</j:if>
+              			<j:if test="${cslink==null}">
+                				${cs.revision}
+              			</j:if>
+              
             			</b><br/>
 						<pre><st:out value="${cs.msg}"/></pre>
 						
 						<table>
 						<j:forEach var="item" items="${cs.modifiedFiles}">
-						    <tr>
-						    <td style="vertical-align:middle"><t:editTypeIcon type="${item.editType}" style="vertical-align:middle"/> ${item.action}</td>
-						    <td style="vertical-align:middle">${item.path}</td>
-						    </tr>
+							<tr>
+          					<td style="vertical-align:middle"><t:editTypeIcon type="${item.editType}" style="vertical-align:middle"/> ${item.action}</td>
+          					<td>
+            					<a href="${browser.getFileLink(item)}">${item.path}</a>
+            					<j:set var="diff" value="${browser.getDiffLink(item)}"/>
+            					<j:if test="${diff!=null}">
+              						<st:nbsp/>
+              						<a href="${diff}">(diff)</a>
+            					</j:if>
+          					</td>
+        					</tr>
 						</j:forEach>
 						</table>
 					</div>

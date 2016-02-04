@@ -656,6 +656,7 @@ public class RepoScm extends SCM implements Serializable {
 		final RevisionState currentState = new RevisionState(
 				getStaticManifest(launcher, repoDir, listener.getLogger()),
 				getManifestRevision(launcher, repoDir, listener.getLogger()),
+				manifestRepositoryUrl,
 				expandedManifestBranch, listener.getLogger());
 
 		final Change change;
@@ -701,7 +702,7 @@ public class RepoScm extends SCM implements Serializable {
 				getManifestRevision(launcher, repoDir, listener.getLogger());
 		final String expandedBranch = env.expand(manifestBranch);
 		final RevisionState currentState =
-				new RevisionState(manifest, manifestRevision, expandedBranch,
+				new RevisionState(manifest, manifestRevision, manifestRepositoryUrl, expandedBranch,
 						listener.getLogger());
 		build.addAction(currentState);
 

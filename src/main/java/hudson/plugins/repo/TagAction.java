@@ -23,6 +23,7 @@
  */
 package hudson.plugins.repo;
 
+import hudson.model.AbstractBuild;
 import hudson.model.Run;
 import hudson.scm.AbstractScmTagAction;
 
@@ -88,4 +89,14 @@ public class TagAction extends AbstractScmTagAction {
         final String manifest = revisionState.getManifest();
         return manifest;
 	}
+
+    /**
+     * This method gets revision info recorded for the build with information for each repo project.
+     * @param build to get the revision for
+     * @return revison info for the build
+     */
+    public static RevisionState getStateForBuild(@SuppressWarnings("rawtypes")
+    											final AbstractBuild build) {
+    	return build.getAction(RevisionState.class);
+    }
 }

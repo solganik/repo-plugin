@@ -36,14 +36,14 @@ import junit.framework.TestCase;
 public class TestProjectState extends TestCase {
 
 	private ProjectState projectStateA = ProjectState.constructCachedInstance("a", "a",
-			"c9039e9649d133d80073e432816b9b4915776b41");
+			"c9039e9649d133d80073e432816b9b4915776b41","https://github.com/test");
 
 
 	private ProjectState projectStateB = ProjectState.constructCachedInstance("b", "b",
-			"fa822eff984195ec8923718cd025fd44b77a26ef");
+			"fa822eff984195ec8923718cd025fd44b77a26ef","https://github.com/test");
 
 	private ProjectState projectStateA2 = ProjectState.constructCachedInstance("a", "a",
-			"c9039e9649d133d80073e432816b9b4915776b41");
+			"c9039e9649d133d80073e432816b9b4915776b41","https://github.com/test");
 
 
 	/**
